@@ -18,4 +18,9 @@ public class ReqHeader {
     String pageId;
     String pageName;
     String recordElementIds;
+    String personalToken;
+    String licenseId;
+    String userEmail;
+    String clientTopic; //used inside kafka consumer & producer
+    String userId; //used inside kafka consumer & producer
 }

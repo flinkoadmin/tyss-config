@@ -1,14 +1,17 @@
 package com.tyss.optimize.config.auth;
 
-import com.tyss.optimize.common.model.auth.AccessTokenMapper;
 import com.tyss.optimize.common.util.CommonConstants;
 import com.tyss.optimize.common.util.Privilege;
+import org.keycloak.KeycloakPrincipal;
+import org.keycloak.KeycloakSecurityContext;
+import org.keycloak.representations.AccessToken;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.provider.authentication.OAuth2AuthenticationDetails;
 
 import java.io.Serializable;
+import java.security.Principal;
+import java.util.Map;
 import java.util.Objects;
 
 public class CustomPermissionEvaluator implements PermissionEvaluator {
@@ -36,9 +39,20 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
 
     private boolean hasPrivilege(Authentication auth, String targetType, String permission) {
 
-        OAuth2AuthenticationDetails details = (OAuth2AuthenticationDetails) auth.getDetails();
-        AccessTokenMapper accessTokenMapper  = (AccessTokenMapper) details.getDecodedDetails();
-        String privilege = accessTokenMapper.getPrivilege();
+        Principal principal = (Principal) auth.getPrincipal();
+        KeycloakPrincipal<KeycloakSecurityContext> kp = (KeycloakPrincipal<KeycloakSecurityContext>) principal;
+        AccessToken token = kp.getKeycloakSecurityContext().getToken();
+        System.out.println("Inside hasPrivilege() accessToken: "+token);
+
+        Map<String, Object> otherClaims = token.getOtherClaims();
+        System.out.println("Inside hasPrivilege() otherClaims: "+otherClaims);
+
+        String privilege = null;
+        if(otherClaims.containsKey("currentPrivilege")){
+            privilege = (String) otherClaims.get("currentPrivilege");
+        }
+        System.out.println("Inside hasPrivilege() privilege: "+privilege);
+
         if(Privilege.SUPER_ADMIN.equals(privilege)) {
             return true;
         }
@@ -47,19 +61,16 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
             if (Objects.nonNull(grantAuth) && grantAuth.startsWith(targetType)) {
 
                 String grant = grantAuth.substring(grantAuth.indexOf(":")+1, grantAuth.length());
-
-                switch (grant)
-                {
+                switch (grant) {
                     case CommonConstants.FULL_ACCESS:
+                    case CommonConstants.WRITE:
                         return true;
                     case CommonConstants.NO_ACCESS:
                         return false;
-                    case CommonConstants.WRITE:
-                        return true;
                     case CommonConstants.VIEW:
                         return (permission.equals(CommonConstants.WRITE)) ? false : true;
                     default:
-                        return false;                        //code
+                        return false;
                 }
             }
         }

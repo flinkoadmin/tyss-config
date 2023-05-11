@@ -10,7 +10,6 @@ public class SpringBeans {
     @Autowired
     private static ApplicationContext applicationContext;
 
-
     SpringBeans(@Autowired ApplicationContext ctx)
     {
         SpringBeans.applicationContext = ctx;
